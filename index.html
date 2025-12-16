@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Node Visualization 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="navigation">
+        <div class="nav-container">
+            <h1 class="title">Bitcoin Node Network 3D</h1>
+            <nav class="viz-selector">
+                <button id="topographyBtn" class="nav-btn active">Bitcoin Topography</button>
+                <button id="splitWorldBtn" class="nav-btn">Split World</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Visualization Container -->
+    <div id="globeViz" class="globe-container"></div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading Bitcoin node data...</p>
+    </div>
+
+    <!-- Info Panel -->
+    <div id="infoPanel" class="info-panel">
+        <h3 id="vizTitle">Bitcoin Topography</h3>
+        <p id="vizDescription">3D hex-binned visualization of clearnet Bitcoin nodes</p>
+        <div id="stats" class="stats"></div>
+    </div>
+
+    <!-- Import Three.js and three-globe from CDN -->
+    <!-- Note: For production, consider hosting these libraries locally or using a verified CDN with SRI -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/three-globe@2.31.0/dist/three-globe.min.js" crossorigin="anonymous"></script>
+
+    <!-- Main Application Scripts -->
+    <script src="topography_viz.js"></script>
+    <script src="split_world_viz.js"></script>
+
+    <!-- Navigation Logic -->
+    <script>
+        // Global state
+        let currentViz = 'topography';
+        let topographyInstance = null;
+        let splitWorldInstance = null;
+
+        // Navigation button handlers
+        document.getElementById('topographyBtn').addEventListener('click', () => {
+            if (currentViz !== 'topography') {
+                currentViz = 'topography';
+                updateActiveButton();
+                switchVisualization();
+            }
+        });
+
+        document.getElementById('splitWorldBtn').addEventListener('click', () => {
+            if (currentViz !== 'splitWorld') {
+                currentViz = 'splitWorld';
+                updateActiveButton();
+                switchVisualization();
+            }
+        });
+
+        function updateActiveButton() {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (currentViz === 'topography') {
+                document.getElementById('topographyBtn').classList.add('active');
+                document.getElementById('vizTitle').textContent = 'Bitcoin Topography';
+                document.getElementById('vizDescription').textContent = '3D hex-binned visualization of clearnet Bitcoin nodes';
+            } else {
+                document.getElementById('splitWorldBtn').classList.add('active');
+                document.getElementById('vizTitle').textContent = 'Split World: Tor vs Clearnet';
+                document.getElementById('vizDescription').textContent = 'Surface clearnet nodes vs abstract Tor privacy layer';
+            }
+        }
+
+        function switchVisualization() {
+            const container = document.getElementById('globeViz');
+            
+            // Clean up previous visualization
+            if (topographyInstance && topographyInstance.cleanup) {
+                topographyInstance.cleanup();
+            }
+            if (splitWorldInstance && splitWorldInstance.cleanup) {
+                splitWorldInstance.cleanup();
+            }
+            
+            // Clear container
+            container.innerHTML = '';
+            
+            // Initialize new visualization
+            if (currentViz === 'topography') {
+                if (window.initTopographyViz) {
+                    topographyInstance = window.initTopographyViz();
+                }
+            } else {
+                if (window.initSplitWorldViz) {
+                    splitWorldInstance = window.initSplitWorldViz();
+                }
+            }
+        }
+
+        // Initialize first visualization on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                switchVisualization();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

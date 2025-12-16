@@ -1,0 +1,46 @@
+name: Fetch Bitcoin Node Data
+
+on:
+  # Run every Sunday at 22:00 UTC (late Sunday CST)
+  schedule:
+    - cron: '0 22 * * 0'
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write  # Required to commit and push changes
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Create data directory if it doesn't exist
+        run: mkdir -p data
+        
+      - name: Fetch latest snapshot from Bitnodes API
+        run: |
+          curl -H "Accept: application/json" \
+               -o data/latest_snapshot.json \
+               https://bitnodes.io/api/v1/snapshots/latest/
+               
+      - name: Check if data was fetched successfully
+        run: |
+          if [ -f data/latest_snapshot.json ]; then
+            echo "Data fetched successfully"
+            ls -lh data/latest_snapshot.json
+          else
+            echo "Failed to fetch data"
+            exit 1
+          fi
+          
+      - name: Commit and push updated data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update Bitcoin node data snapshot'
+          file_pattern: 'data/latest_snapshot.json'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
