@@ -4,6 +4,22 @@
  */
 
 window.initSplitWorldViz = function() {
+    // Constants for Bitnodes API data structure
+    const BITNODES_INDEX = {
+        TOR: 11,        // Index 11 is the 'tor' flag
+        LATITUDE: 7,    // Index 7 is latitude
+        LONGITUDE: 8    // Index 8 is longitude
+    };
+    
+    // Visualization constants
+    const TOR_CLOUD_BASE_RADIUS = 120;
+    const TOR_CLOUD_MAX_RADIUS = 180;
+    const GLOBE_ROTATION_SPEED = 0.002;
+    const TOR_CLOUD_ROTATION_SPEED_Y = -0.001;
+    const TOR_CLOUD_ROTATION_SPEED_X = 0.0005;
+    const TOR_CLOUD_PULSE_SPEED = 0.001;
+    const TOR_CLOUD_PULSE_AMPLITUDE = 0.05;
+    
     // Scene setup
     let scene, camera, renderer, globe, torCloud;
     let animationFrameId;
@@ -64,9 +80,9 @@ window.initSplitWorldViz = function() {
             const torNodes = [];
             
             Object.entries(nodes).forEach(([address, nodeData]) => {
-                const lat = nodeData[7];  // Index 7 is latitude
-                const lng = nodeData[8];  // Index 8 is longitude
-                const isTor = nodeData[11]; // Index 11 is the 'tor' flag
+                const lat = nodeData[BITNODES_INDEX.LATITUDE];
+                const lng = nodeData[BITNODES_INDEX.LONGITUDE];
+                const isTor = nodeData[BITNODES_INDEX.TOR];
                 
                 if (lat !== null && lng !== null) {
                     const node = {
@@ -149,7 +165,7 @@ window.initSplitWorldViz = function() {
             </div>
             <div class="stat-item">
                 <span class="stat-label">Tor Nodes:</span>
-                <span class="stat-value" style="color: #00ffff;">${torCount.toLocaleString()}</span>
+                <span class="stat-value tor">${torCount.toLocaleString()}</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">Total Nodes:</span>
@@ -224,15 +240,11 @@ window.initSplitWorldViz = function() {
         const positions = [];
         const colors = [];
         
-        // Base radius for the cloud (slightly larger than globe)
-        const cloudRadius = 120;
-        const maxRadius = 180;
-        
         torNodes.forEach(node => {
             // Random position in 3D space around the globe
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
-            const radius = cloudRadius + Math.random() * (maxRadius - cloudRadius);
+            const radius = TOR_CLOUD_BASE_RADIUS + Math.random() * (TOR_CLOUD_MAX_RADIUS - TOR_CLOUD_BASE_RADIUS);
             
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.sin(phi) * Math.sin(theta);
@@ -276,16 +288,16 @@ window.initSplitWorldViz = function() {
         
         // Auto-rotate globe
         if (globe) {
-            globe.rotation.y += 0.002;
+            globe.rotation.y += GLOBE_ROTATION_SPEED;
         }
         
         // Gentle rotation and pulsing of Tor cloud
         if (torCloud) {
-            torCloud.rotation.y -= 0.001;
-            torCloud.rotation.x += 0.0005;
+            torCloud.rotation.y += TOR_CLOUD_ROTATION_SPEED_Y;
+            torCloud.rotation.x += TOR_CLOUD_ROTATION_SPEED_X;
             
             // Pulsing effect
-            const scale = 1 + Math.sin(Date.now() * 0.001) * 0.05;
+            const scale = 1 + Math.sin(Date.now() * TOR_CLOUD_PULSE_SPEED) * TOR_CLOUD_PULSE_AMPLITUDE;
             torCloud.scale.set(scale, scale, scale);
         }
         

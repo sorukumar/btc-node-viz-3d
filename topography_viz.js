@@ -4,6 +4,19 @@
  */
 
 window.initTopographyViz = function() {
+    // Constants for Bitnodes API data structure
+    const BITNODES_INDEX = {
+        TOR: 11,        // Index 11 is the 'tor' flag
+        LATITUDE: 7,    // Index 7 is latitude
+        LONGITUDE: 8    // Index 8 is longitude
+    };
+    
+    // Visualization constants
+    const HEX_BIN_RESOLUTION = 5;
+    const MAX_VALUE_DIVISOR = 20;
+    const ALTITUDE_MULTIPLIER = 0.01;
+    const GLOBE_ROTATION_SPEED = 0.002;
+    
     // Scene setup
     let scene, camera, renderer, globe;
     let animationFrameId;
@@ -81,9 +94,9 @@ window.initTopographyViz = function() {
             
             Object.entries(nodes).forEach(([address, nodeData]) => {
                 // Filter for clearnet nodes (tor field is false or doesn't exist as true)
-                if (!nodeData[11]) { // Index 11 is the 'tor' flag in Bitnodes data
-                    const lat = nodeData[7];  // Index 7 is latitude
-                    const lng = nodeData[8];  // Index 8 is longitude
+                if (!nodeData[BITNODES_INDEX.TOR]) {
+                    const lat = nodeData[BITNODES_INDEX.LATITUDE];
+                    const lng = nodeData[BITNODES_INDEX.LONGITUDE];
                     
                     if (lat !== null && lng !== null) {
                         clearnetNodes.push({
@@ -165,10 +178,10 @@ window.initTopographyViz = function() {
             .hexBinPointsData(nodeData)
             .hexBinPointLat('lat')
             .hexBinPointLng('lng')
-            .hexBinResolution(5)
-            .hexTopColor(d => getColorForValue(d.sumWeight, nodeData.length / 20))
-            .hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / 20))
-            .hexAltitude(d => d.sumWeight * 0.01)
+            .hexBinResolution(HEX_BIN_RESOLUTION)
+            .hexTopColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR))
+            .hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR))
+            .hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER)
             .hexBinMerge(true)
             .enablePointerInteraction(true);
         
@@ -185,7 +198,7 @@ window.initTopographyViz = function() {
         
         // Auto-rotate globe
         if (globe) {
-            globe.rotation.y += 0.002;
+            globe.rotation.y += GLOBE_ROTATION_SPEED;
         }
         
         renderer.render(scene, camera);

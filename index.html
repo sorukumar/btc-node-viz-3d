@@ -35,8 +35,9 @@
     </div>
 
     <!-- Import Three.js and three-globe from CDN -->
-    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three-globe@2.31.0/dist/three-globe.min.js"></script>
+    <!-- Note: For production, consider hosting these libraries locally or using a verified CDN with SRI -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/three-globe@2.31.0/dist/three-globe.min.js" crossorigin="anonymous"></script>
 
     <!-- Main Application Scripts -->
     <script src="topography_viz.js"></script>

@@ -169,6 +169,10 @@ body {
     font-weight: 600;
 }
 
+.stat-value.tor {
+    color: #00ffff;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-container {
