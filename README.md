@@ -40,10 +40,21 @@ Simply open `index.html` in a modern web browser. The visualization will:
 ## Data Collection
 
 The project uses a GitHub Actions workflow that:
-- Runs every Sunday at 22:00 UTC (late Sunday CST)
+- Runs automatically every Sunday at 22:00 UTC (late Sunday CST)
 - Fetches data from `https://bitnodes.io/api/v1/snapshots/latest/`
 - Saves it to `data/latest_snapshot.json`
 - Automatically commits the updated data
+
+### Manual Data Update
+
+You can manually trigger the data fetch workflow:
+
+1. Go to the **Actions** tab in the GitHub repository
+2. Select the **"Fetch Bitcoin Node Data"** workflow
+3. Click **"Run workflow"** button
+4. Select the branch and click **"Run workflow"**
+
+This will immediately fetch the latest Bitcoin node data from Bitnodes API.
 
 ## File Structure
 
@@ -71,8 +82,47 @@ The project uses a GitHub Actions workflow that:
 
 To run locally:
 1. Clone the repository
-2. Open `index.html` in a web browser
-3. The visualization will use demo data if `data/latest_snapshot.json` is not available
+2. (Optional) Run `./fetch_latest_data.sh` to get the latest Bitcoin node data
+3. Open `index.html` in a modern web browser (Chrome, Firefox, Edge, etc.)
+4. The visualization will use demo data if `data/latest_snapshot.json` is not available
+
+### Updating Data Manually
+
+To fetch the latest Bitcoin node data outside of the scheduled workflow:
+```bash
+./fetch_latest_data.sh
+```
+
+This will download the latest snapshot from Bitnodes API and save it to `data/latest_snapshot.json`.
+
+## Troubleshooting
+
+### Visualization Not Rendering
+
+If the visualization is not rendering on GitHub Pages:
+
+1. **Check if libraries are loaded**: Open browser developer tools (F12) and check the Console tab for errors
+2. **Ad Blockers**: Some ad blockers may block CDN resources. Try disabling them for this site
+3. **Browser Compatibility**: Use a modern browser (Chrome, Firefox, Edge, Safari)
+4. **Clear Cache**: Try clearing your browser cache and refreshing the page
+5. **Check GitHub Pages**: Ensure GitHub Pages is enabled in repository settings and pointing to the correct branch
+
+### Error: "Visualization Libraries Not Loaded"
+
+This error appears when Three.js or three-globe libraries fail to load from the CDN. Common causes:
+
+- **Ad Blocker**: Disable ad blockers or content security extensions
+- **Network Issues**: Check your internet connection
+- **CDN Blocked**: Your network may be blocking cdn.jsdelivr.net
+
+**Solution**: The page will automatically display an informative error message. Follow the on-screen instructions.
+
+### Data Issues
+
+If you see demo data or old data:
+
+1. Manually trigger the data fetch workflow (see Manual Data Update section above)
+2. Or run `./fetch_latest_data.sh` locally and commit the changes
 
 ## License
 

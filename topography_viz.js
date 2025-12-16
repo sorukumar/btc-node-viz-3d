@@ -173,8 +173,8 @@ window.initTopographyViz = function() {
      */
     function initGlobe(nodeData) {
         globe = new ThreeGlobe()
-            .globeImageUrl('https://unpkg.com/three-globe@2.31.0/example/img/earth-dark.jpg')
-            .bumpImageUrl('https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png')
+            .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg')
+            .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png')
             .hexBinPointsData(nodeData)
             .hexBinPointLat('lat')
             .hexBinPointLng('lng')

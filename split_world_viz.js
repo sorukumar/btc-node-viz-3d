@@ -207,8 +207,8 @@ window.initSplitWorldViz = function() {
      */
     function initGlobe(clearnetNodes) {
         globe = new ThreeGlobe()
-            .globeImageUrl('https://unpkg.com/three-globe@2.31.0/example/img/earth-dark.jpg')
-            .bumpImageUrl('https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png')
+            .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg')
+            .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png')
             // Add clearnet nodes as glowing points
             .pointsData(clearnetNodes)
             .pointLat('lat')
