@@ -71,8 +71,18 @@ The project uses a GitHub Actions workflow that:
 
 To run locally:
 1. Clone the repository
-2. Open `index.html` in a web browser
-3. The visualization will use demo data if `data/latest_snapshot.json` is not available
+2. (Optional) Run `./fetch_latest_data.sh` to get the latest Bitcoin node data
+3. Open `index.html` in a modern web browser (Chrome, Firefox, Edge, etc.)
+4. The visualization will use demo data if `data/latest_snapshot.json` is not available
+
+### Updating Data Manually
+
+To fetch the latest Bitcoin node data outside of the scheduled workflow:
+```bash
+./fetch_latest_data.sh
+```
+
+This will download the latest snapshot from Bitnodes API and save it to `data/latest_snapshot.json`.
 
 ## License
 
