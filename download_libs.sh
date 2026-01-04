@@ -22,8 +22,17 @@ else
     exit 1
 fi
 
+echo "Downloading OrbitControls..."
+if curl -fL -o lib/OrbitControls.js https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js; then
+    echo "✓ OrbitControls downloaded successfully"
+else
+    echo "✗ Failed to download OrbitControls"
+    exit 1
+fi
+
 echo ""
 echo "Done! Libraries downloaded to lib/ directory"
 echo "To use local libraries, update the script tags in index.html to:"
 echo '  <script src="lib/three.min.js"></script>'
+echo '  <script src="lib/OrbitControls.js"></script>'
 echo '  <script src="lib/three-globe.min.js"></script>'
