@@ -28,3 +28,5 @@ build/
 # Environment variables
 .env
 .env.local
+
+process.py

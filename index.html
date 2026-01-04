@@ -64,7 +64,9 @@
     <!-- Import Three.js as ES module and load three-globe after -->
     <script type="module">
         import * as THREE from './lib/three.module.js';
+        import { OrbitControls } from './lib/OrbitControls.js';
         window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
         
         // Load three-globe after THREE is available
         const script = document.createElement('script');
@@ -77,6 +79,9 @@
         };
         document.head.appendChild(script);
     </script>
+
+    <!-- Load d3-hexbin -->
+    <script src="lib/d3-hexbin.min.js"></script>
 
     <!-- Main Application Scripts -->
     <script src="topography_viz.js"></script>

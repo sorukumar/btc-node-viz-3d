@@ -6,14 +6,16 @@
 window.initSplitWorldViz = function() {
     // Constants for Bitnodes API data structure
     const BITNODES_INDEX = {
-        TOR: 11,        // Index 11 is the 'tor' flag
-        LATITUDE: 7,    // Index 7 is latitude
-        LONGITUDE: 8    // Index 8 is longitude
+        PROTOCOL: 0,
+        USER_AGENT: 1,
+        LAST_SEEN: 2,
+        ASN: 3,
+        HEIGHT: 4
     };
     
     // Visualization constants
-    const TOR_CLOUD_BASE_RADIUS = 120;
-    const TOR_CLOUD_MAX_RADIUS = 180;
+    const TOR_CLOUD_BASE_RADIUS = 60;
+    const TOR_CLOUD_MAX_RADIUS = 90;
     const GLOBE_ROTATION_SPEED = 0.002;
     const TOR_CLOUD_ROTATION_SPEED_Y = -0.001;
     const TOR_CLOUD_ROTATION_SPEED_X = 0.0005;
@@ -72,7 +74,7 @@ window.initSplitWorldViz = function() {
         try {
             loadingDiv.classList.remove('hidden');
             
-            const response = await fetch('./data/latest_snapshot.json');
+            const response = await fetch('./data/bitnode_data.json');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -80,29 +82,32 @@ window.initSplitWorldViz = function() {
             const data = await response.json();
             
             // Extract and separate nodes
-            const nodes = data.nodes || {};
+            const nodes = data;
             const clearnetNodes = [];
             const torNodes = [];
             
             Object.entries(nodes).forEach(([address, nodeData]) => {
-                const lat = nodeData[BITNODES_INDEX.LATITUDE];
-                const lng = nodeData[BITNODES_INDEX.LONGITUDE];
-                const isTor = nodeData[BITNODES_INDEX.TOR];
+                // Use provided coordinates if available, otherwise random
+                let lat = nodeData.latitude || (Math.random() - 0.5) * 180;
+                let lng = nodeData.longitude || (Math.random() - 0.5) * 360;
                 
-                if (lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                    const node = {
-                        lat: lat,
-                        lng: lng,
-                        address: address,
-                        country: nodeData[4] || 'Unknown',
-                        version: nodeData[10] || 'Unknown'
-                    };
-                    
-                    if (isTor) {
-                        torNodes.push(node);
-                    } else {
-                        clearnetNodes.push(node);
-                    }
+                // Validate coordinates
+                if (Math.abs(lat) > 90) lat = (Math.random() - 0.5) * 180;
+                if (Math.abs(lng) > 180) lng = (Math.random() - 0.5) * 360;
+                
+                const node = {
+                    lat: lat,
+                    lng: lng,
+                    address: address,
+                    country: nodeData.country || 'Unknown',
+                    version: nodeData.user_agent?.split(':')[1] || 'Unknown',
+                    city: nodeData.city || 'Unknown'
+                };
+                
+                if (nodeData.addr_family === 'onion' || address.includes('.onion')) {
+                    torNodes.push(node);
+                } else {
+                    clearnetNodes.push(node);
                 }
             });
             
@@ -127,6 +132,7 @@ window.initSplitWorldViz = function() {
             originalTor = [...demo.torNodes];
             totalCount = originalClearnet.length + originalTor.length;
             updateStats(originalClearnet.length, originalTor.length, totalCount);
+            console.log(`Loaded ${demo.clearnetNodes.length} clearnet nodes and ${demo.torNodes.length} Tor nodes (demo)`);
             return demo;
         }
     }
@@ -224,10 +230,17 @@ window.initSplitWorldViz = function() {
     /**
      * Initialize the globe with clearnet nodes
      */
-    function initGlobe(clearnetNodes) {
+    function initGlobe(clearnetNodes, countries) {
         globe = new ThreeGlobe();
         globe.globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg');
         globe.bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png');
+        
+        // Add country polygons for better region distinction
+        globe.polygonsData(countries);
+        globe.polygonCapColor(() => 'rgba(150, 150, 150, 0.4)');
+        globe.polygonSideColor(() => 'rgba(150, 150, 150, 0.4)');
+        globe.polygonStrokeColor(() => 'rgba(255, 255, 255, 0.8)');
+        
         // Add clearnet nodes as glowing points
         globe.pointsData(clearnetNodes);
         globe.pointLat('lat');
@@ -246,19 +259,6 @@ window.initSplitWorldViz = function() {
         globe.arcDashGap(0.2);
         globe.arcDashAnimateTime(3000);
         globe.arcStroke(0.5);
-        globe.enablePointerInteraction(true);
-        globe.onPointClick(point => showPointDetails(point));
-        globe.onPointHover(point => {
-            const tooltip = document.getElementById('tooltip');
-            if (point) {
-                tooltip.innerHTML = point.address;
-                tooltip.style.left = mouseX + 10 + 'px';
-                tooltip.style.top = mouseY + 10 + 'px';
-                tooltip.classList.remove('hidden');
-            } else {
-                tooltip.classList.add('hidden');
-            }
-        });
         
         scene.add(globe);
     }
@@ -272,14 +272,30 @@ window.initSplitWorldViz = function() {
         const colors = [];
         
         torNodes.forEach(node => {
-            // Random position in 3D space around the globe
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI;
-            const radius = TOR_CLOUD_BASE_RADIUS + Math.random() * (TOR_CLOUD_MAX_RADIUS - TOR_CLOUD_BASE_RADIUS);
+            // Position Tor nodes in clouds around the poles
+            const isNorth = Math.random() > 0.5;
+            const poleLat = isNorth ? 80 : -80; // Avoid exact poles
+            const poleLng = Math.random() * 360;
             
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.sin(phi) * Math.sin(theta);
-            const z = radius * Math.cos(phi);
+            // Convert pole to 3D coordinates
+            const globeRadius = 100;
+            const polePhi = (90 - poleLat) * Math.PI / 180;
+            const poleTheta = poleLng * Math.PI / 180;
+            const poleX = globeRadius * Math.sin(polePhi) * Math.cos(poleTheta);
+            const poleY = globeRadius * Math.sin(polePhi) * Math.sin(poleTheta);
+            const poleZ = globeRadius * Math.cos(polePhi);
+            
+            // Add small random offset to create cloud effect
+            const offsetTheta = Math.random() * Math.PI * 2;
+            const offsetPhi = Math.random() * Math.PI / 6; // Small cone
+            const offsetRadius = 5 + Math.random() * 15;
+            const offsetX = offsetRadius * Math.sin(offsetPhi) * Math.cos(offsetTheta);
+            const offsetY = offsetRadius * Math.sin(offsetPhi) * Math.sin(offsetTheta);
+            const offsetZ = offsetRadius * Math.cos(offsetPhi);
+            
+            const x = poleX + offsetX;
+            const y = poleY + offsetY;
+            const z = poleZ + offsetZ;
             
             positions.push(x, y, z);
             
@@ -339,6 +355,42 @@ window.initSplitWorldViz = function() {
                 <span class="details-value">${point.lng.toFixed(2)}°</span>
             </div>
         `;
+    }
+
+    /**
+     * Show tooltip on point hover
+     */
+    function showTooltip(data) {
+        const tooltip = document.getElementById('tooltip');
+        if (data.address) {
+            // Node tooltip
+            tooltip.innerHTML = `
+                <strong>Node Info</strong><br>
+                Address: ${data.address}<br>
+                Country: ${data.country}<br>
+                City: ${data.city}<br>
+                Version: ${data.version}
+            `;
+        } else {
+            // Region tooltip
+            tooltip.innerHTML = `
+                <strong>Region Info</strong><br>
+                Country: ${data.country}<br>
+                City: ${data.city || 'N/A'}<br>
+                ${data.sumWeight}
+            `;
+        }
+        tooltip.classList.remove('hidden');
+        tooltip.style.left = mouseX + 10 + 'px';
+        tooltip.style.top = mouseY + 10 + 'px';
+    }
+
+    /**
+     * Hide tooltip
+     */
+    function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.add('hidden');
     }
 
     /**
@@ -426,12 +478,22 @@ window.initSplitWorldViz = function() {
     }
 
     /**
+     * Load country polygons data
+     */
+    async function loadCountries() {
+        const response = await fetch('./data/countries.geo.json');
+        const data = await response.json();
+        return data.features;
+    }
+
+    /**
      * Initialize the visualization
      */
     async function init() {
         initScene();
         const { clearnetNodes, torNodes } = await loadData();
-        initGlobe(clearnetNodes);
+        const countries = await loadCountries();
+        initGlobe(clearnetNodes, countries);
         createTorCloud(torNodes);
         animate();
         
@@ -440,6 +502,46 @@ window.initSplitWorldViz = function() {
         mouseMoveListener = (e) => {
             mouseX = e.clientX;
             mouseY = e.clientY;
+            
+            // Raycasting for hover
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const rect = container.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = - ((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([globe, torCloud].concat(globe.children || []));
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                if (intersect.object === torCloud) {
+                    const index = intersect.index;
+                    const node = originalTor[index];
+                    showTooltip(node);
+                } else if (intersect.object === globe || (globe.children && globe.children.includes(intersect.object))) {
+                    const point = intersect.point;
+                    const lat = Math.asin(point.y / 100) * 180 / Math.PI;
+                    const lng = Math.atan2(point.z, point.x) * 180 / Math.PI;
+                    // Find closest clearnet node
+                    let closest = null;
+                    let minDist = Infinity;
+                    originalClearnet.forEach(node => {
+                        const dist = Math.sqrt((node.lat - lat) ** 2 + (node.lng - lng) ** 2);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = node;
+                        }
+                    });
+                    if (closest && minDist < 5) {
+                        showTooltip(closest);
+                    } else {
+                        hideTooltip();
+                    }
+                } else {
+                    hideTooltip();
+                }
+            } else {
+                hideTooltip();
+            }
         };
         container.addEventListener('mousemove', mouseMoveListener);
         

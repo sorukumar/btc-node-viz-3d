@@ -6,21 +6,27 @@
 window.initTopographyViz = function() {
     // Constants for Bitnodes API data structure
     const BITNODES_INDEX = {
-        TOR: 11,        // Index 11 is the 'tor' flag
-        LATITUDE: 7,    // Index 7 is latitude
-        LONGITUDE: 8    // Index 8 is longitude
+        PROTOCOL: 0,
+        USER_AGENT: 1,
+        LAST_SEEN: 2,
+        ASN: 3,
+        HEIGHT: 4
     };
     
     // Visualization constants
-    const HEX_BIN_RESOLUTION = 5;
+    const HEX_BIN_RESOLUTION = 4;
     const MAX_VALUE_DIVISOR = 20;
-    const ALTITUDE_MULTIPLIER = 0.01;
+    const ALTITUDE_MULTIPLIER = 0.02;
+    const MAX_ALTITUDE = 0.3;
     const GLOBE_ROTATION_SPEED = 0.002;
     
     // Scene setup
-    let scene, camera, renderer, globe;
+    let scene, camera, renderer, globe, controls;
     let animationFrameId;
     let originalNodeData = [];
+    let nodeDataGlobal = [];
+    let hexBins = [];
+    let hexbinGlobal;
     let totalCount = 0;
     let mouseX, mouseY;
     let mouseMoveListener;
@@ -51,6 +57,13 @@ window.initTopographyViz = function() {
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
         
+        // Orbit controls for zoom and pan
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 150; // Minimum zoom distance
+        controls.maxDistance = 500; // Maximum zoom distance
+        
         // Add ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
@@ -62,19 +75,24 @@ window.initTopographyViz = function() {
     }
 
     /**
-     * Create color gradient from dark blue to glowing orange based on value
+     * Create color gradient from cyan to yellow to red based on value
      */
     function getColorForValue(value, maxValue) {
         const ratio = Math.min(value / maxValue, 1);
-        
-        // Dark blue to orange gradient
-        const darkBlue = { r: 30, g: 60, b: 114 };
-        const orange = { r: 255, g: 107, b: 0 };
-        
-        const r = Math.floor(darkBlue.r + (orange.r - darkBlue.r) * ratio);
-        const g = Math.floor(darkBlue.g + (orange.g - darkBlue.g) * ratio);
-        const b = Math.floor(darkBlue.b + (orange.b - darkBlue.b) * ratio);
-        
+        let r, g, b;
+        if (ratio < 0.5) {
+            const subRatio = ratio * 2;
+            // Cyan to yellow
+            r = Math.floor(0 + (255 - 0) * subRatio);
+            g = Math.floor(255 + (255 - 255) * subRatio);
+            b = Math.floor(255 + (0 - 255) * subRatio);
+        } else {
+            const subRatio = (ratio - 0.5) * 2;
+            // Yellow to red
+            r = Math.floor(255 + (255 - 255) * subRatio);
+            g = Math.floor(255 + (0 - 255) * subRatio);
+            b = Math.floor(0 + (0 - 0) * subRatio);
+        }
         return `rgb(${r}, ${g}, ${b})`;
     }
 
@@ -85,39 +103,73 @@ window.initTopographyViz = function() {
         try {
             loadingDiv.classList.remove('hidden');
             
-            const response = await fetch('./data/latest_snapshot.json');
+            const response = await fetch('./data/bitnode_data.json');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const data = await response.json();
             
+            // Country approximate centers for invalid coordinates
+            const countryCenters = {
+                'US': [37.0902, -95.7129],
+                'DE': [51.1657, 10.4515],
+                'FR': [46.2276, 2.2137],
+                'CA': [56.1304, -106.3468],
+                'FI': [61.9241, 25.7482],
+                'NL': [52.1326, 5.2913],
+                'GB': [55.3781, -3.4360],
+                'CH': [46.8182, 8.2275],
+                'AU': [-25.2744, 133.7751],
+                'KR': [35.9078, 127.7669],
+                // Add more as needed
+            };
+            
             // Extract and filter clearnet nodes (non-Tor)
-            const nodes = data.nodes || {};
+            const nodes = data;
             const clearnetNodes = [];
+            const torNodes = [];
             
             Object.entries(nodes).forEach(([address, nodeData]) => {
-                // Filter for clearnet nodes (tor field is false or doesn't exist as true)
-                if (!nodeData[BITNODES_INDEX.TOR]) {
-                    const lat = nodeData[BITNODES_INDEX.LATITUDE];
-                    const lng = nodeData[BITNODES_INDEX.LONGITUDE];
-                    
-                    if (lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                        const node = {
-                            lat: lat,
-                            lng: lng,
-                            address: address,
-                            country: nodeData[4] || 'Unknown',
-                            version: nodeData[10] || 'Unknown'
-                        };
-                        clearnetNodes.push(node);
+                // Use provided coordinates if available, otherwise random
+                let lat = nodeData.latitude || (Math.random() - 0.5) * 180;
+                let lng = nodeData.longitude || (Math.random() - 0.5) * 360;
+                
+                // Validate and correct coordinates
+                if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+                    const country = nodeData.country;
+                    if (country && countryCenters[country]) {
+                        [lat, lng] = countryCenters[country];
+                        // Add small random offset to avoid exact overlap
+                        lat += (Math.random() - 0.5) * 2;
+                        lng += (Math.random() - 0.5) * 2;
+                    } else {
+                        // Fallback to random if country not in centers
+                        lat = (Math.random() - 0.5) * 180;
+                        lng = (Math.random() - 0.5) * 360;
                     }
+                }
+                
+                const node = {
+                    lat: Math.round(lat * 10000) / 10000,
+                    lng: Math.round(lng * 10000) / 10000,
+                    address: address,
+                    country: nodeData.country || 'Unknown',
+                    version: nodeData.user_agent?.split(':')[1] || 'Unknown',
+                    city: nodeData.city || 'Unknown'
+                };
+                
+                if (nodeData.addr_family === 'onion' || address.includes('.onion')) {
+                    torNodes.push(node);
+                } else {
+                    clearnetNodes.push(node);
                 }
             });
             
             console.log(`Loaded ${clearnetNodes.length} clearnet nodes`);
             
             originalNodeData = [...clearnetNodes];
+            nodeDataGlobal = [...clearnetNodes];
             totalCount = Object.keys(nodes).length;
             
             // Update stats
@@ -133,6 +185,7 @@ window.initTopographyViz = function() {
             const demoData = generateDemoData();
             originalNodeData = [...demoData];
             totalCount = demoData.length;
+            console.log(`Loaded ${demoData.length} clearnet nodes (demo)`);
             return demoData;
         }
     }
@@ -204,37 +257,72 @@ window.initTopographyViz = function() {
     }
 
     /**
+     * Show tooltip on hex hover
+     */
+    function showTooltip(hexData) {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.innerHTML = `
+            <strong>Region Info</strong><br>
+            Region: ${hexData.region || 'Unknown'}<br>
+            City: ${hexData.city || 'Unknown'}<br>
+            Nodes: ${hexData.sumWeight}<br>
+            Lat: ${hexData.lat}°<br>
+            Lng: ${hexData.lng}°<br>
+            Distance: ${hexData.dist || 'N/A'}<br>
+            Nodes Found: ${hexData.foundNodes || 'N/A'}
+        `;
+        tooltip.classList.remove('hidden');
+        tooltip.style.left = mouseX + 10 + 'px';
+        tooltip.style.top = mouseY + 10 + 'px';
+    }
+
+    /**
+     * Hide tooltip
+     */
+    function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.add('hidden');
+    }
+
+    /**
      * Initialize the globe with hex-binned layer
      */
-    function initGlobe(nodeData) {
+    function initGlobe(nodeData, countries) {
+        // Bin the data for hover detection
+        hexbinGlobal = d3.hexbin().radius(5).extent([[-180, -90], [180, 90]]);
+        hexBins = hexbinGlobal(nodeData.map(d => [d.lng, d.lat]));
+        
         globe = new ThreeGlobe();
         globe.globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg');
         globe.bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png');
+        
+        // Add country polygons for better region distinction
+        globe.polygonsData(countries);
+        globe.polygonCapColor(() => 'rgba(150, 150, 150, 0.4)');
+        globe.polygonSideColor(() => 'rgba(150, 150, 150, 0.4)');
+        globe.polygonStrokeColor(() => 'rgba(255, 255, 255, 0.8)');
+        
         globe.hexBinPointsData(nodeData);
         globe.hexBinPointLat('lat');
         globe.hexBinPointLng('lng');
         globe.hexBinResolution(HEX_BIN_RESOLUTION);
         globe.hexTopColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR));
         globe.hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR));
-        globe.hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER);
+        globe.hexAltitude(d => Math.min(d.sumWeight * ALTITUDE_MULTIPLIER, MAX_ALTITUDE));
         globe.hexBinMerge(true);
-        globe.enablePointerInteraction(true);
-        globe.onHexClick(hexData => showHexDetails(hexData));
-        globe.onHexHover(hexData => {
-            const tooltip = document.getElementById('tooltip');
-            if (hexData) {
-                tooltip.innerHTML = `Nodes: ${hexData.sumWeight}`;
-                tooltip.style.left = mouseX + 10 + 'px';
-                tooltip.style.top = mouseY + 10 + 'px';
-                tooltip.classList.remove('hidden');
-            } else {
-                tooltip.classList.add('hidden');
-            }
-        });
         
         scene.add(globe);
         
         loadingDiv.classList.add('hidden');
+    }
+
+    /**
+     * Load country polygons data
+     */
+    async function loadCountries() {
+        const response = await fetch('./data/countries.geo.json');
+        const data = await response.json();
+        return data.features;
     }
 
     /**
@@ -243,9 +331,14 @@ window.initTopographyViz = function() {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         
-        // Auto-rotate globe
-        if (globe) {
+        // Auto-rotate globe only when zoomed out
+        if (globe && camera.position.z > 350) {
             globe.rotation.y += GLOBE_ROTATION_SPEED;
+        }
+        
+        // Update orbit controls
+        if (controls) {
+            controls.update();
         }
         
         renderer.render(scene, camera);
@@ -288,6 +381,10 @@ window.initTopographyViz = function() {
             scene.remove(globe);
         }
         
+        if (controls) {
+            controls.dispose();
+        }
+        
         // Clear stats
         statsDiv.innerHTML = '';
         
@@ -311,12 +408,70 @@ window.initTopographyViz = function() {
     async function init() {
         initScene();
         const nodeData = await loadData();
-        initGlobe(nodeData);
+        const countries = await loadCountries();
+        initGlobe(nodeData, countries);
         animate();
         
         mouseMoveListener = (e) => {
             mouseX = e.clientX;
             mouseY = e.clientY;
+            
+            // Raycasting for hover
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const rect = container.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = - ((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(globe);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                
+                // Account for globe rotation (only y-axis rotation)
+                const angle = -globe.rotation.y;
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                const x = point.x * cos - point.z * sin;
+                const z = point.x * sin + point.z * cos;
+                const y = point.y;
+                
+                const lat = Math.asin(y / 100) * 180 / Math.PI;
+                const lng = Math.atan2(z, x) * 180 / Math.PI;
+                
+                // Find the closest hex bin
+                let hoveredBin = null;
+                let minDist = Infinity;
+                hexBins.forEach(bin => {
+                    const dist = Math.sqrt((bin.x - lng) ** 2 + (bin.y - lat) ** 2);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        hoveredBin = bin;
+                    }
+                });
+                
+                if (hoveredBin && minDist < 10) {
+                    // Find primary country and city
+                    const countries = {};
+                    const cities = {};
+                    let foundNodes = 0;
+                    hoveredBin.forEach(point => {
+                        const node = nodeDataGlobal.find(n => n.lng === point[0] && n.lat === point[1]);
+                        if (node) {
+                            foundNodes++;
+                            countries[node.country] = (countries[node.country] || 0) + 1;
+                            cities[node.city] = (cities[node.city] || 0) + 1;
+                        }
+                    });
+                    const primaryCountry = Object.keys(countries).reduce((a, b) => countries[a] > countries[b] ? a : b, 'Unknown');
+                    const primaryCity = Object.keys(cities).reduce((a, b) => cities[a] > cities[b] ? a : b, 'Unknown');
+                    
+                    showTooltip({ sumWeight: hoveredBin.length, lat: lat.toFixed(2), lng: lng.toFixed(2), region: primaryCountry, city: primaryCity, dist: minDist.toFixed(2), foundNodes });
+                } else {
+                    showTooltip({ lat: lat.toFixed(2), lng: lng.toFixed(2), sumWeight: 'No data', region: 'Unknown', city: 'Unknown', dist: minDist.toFixed(2), foundNodes: 0 });
+                }
+            } else {
+                hideTooltip();
+            }
         };
         container.addEventListener('mousemove', mouseMoveListener);
         
@@ -331,10 +486,12 @@ window.initTopographyViz = function() {
         cleanup,
         filterNodes: (query) => {
             const filtered = originalNodeData.filter(node => node.address.toLowerCase().includes(query));
+            nodeDataGlobal = filtered;
+            hexBins = hexbinGlobal(filtered.map(d => [d.lng, d.lat]));
             globe.hexBinPointsData(filtered);
             globe.hexTopColor(d => getColorForValue(d.sumWeight, filtered.length / MAX_VALUE_DIVISOR));
             globe.hexSideColor(d => getColorForValue(d.sumWeight, filtered.length / MAX_VALUE_DIVISOR));
-            globe.hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER);
+            globe.hexAltitude(d => Math.min(d.sumWeight * ALTITUDE_MULTIPLIER, MAX_ALTITUDE));
             updateStats(filtered.length, totalCount);
         }
     };
