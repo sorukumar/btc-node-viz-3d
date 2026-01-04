@@ -64,7 +64,6 @@
     <!-- Import Three.js, OrbitControls, and three-globe from local lib directory -->
     <!-- Libraries are downloaded locally to ensure compatibility with GitHub Pages -->
     <script src="lib/three.min.js"></script>
-    <script src="lib/OrbitControls.js"></script>
     <script src="lib/three-globe.min.js"></script>
 
     <!-- Main Application Scripts -->
@@ -159,13 +158,13 @@
         // Initialize first visualization on load
         window.addEventListener('load', () => {
             // Check if required libraries are loaded
-            if (typeof THREE === 'undefined' || typeof ThreeGlobe === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
-                console.error('Required libraries not loaded. THREE:', typeof THREE, 'ThreeGlobe:', typeof ThreeGlobe, 'OrbitControls:', typeof THREE.OrbitControls);
+            if (typeof THREE === 'undefined' || typeof ThreeGlobe === 'undefined') {
+                console.error('Required libraries not loaded. THREE:', typeof THREE, 'ThreeGlobe:', typeof ThreeGlobe);
                 const loadingDiv = document.getElementById('loading');
                 loadingDiv.innerHTML = `
                     <p style="color: #ff6b00; font-size: 18px; margin-bottom: 15px;">Error: Visualization Libraries Not Loaded</p>
                     <p style="color: #e0e0e0; font-size: 14px; max-width: 400px;">
-                        The required 3D graphics libraries (Three.js, three-globe, and OrbitControls) failed to load.
+                        The required 3D graphics libraries (Three.js and three-globe) failed to load.
                         <br><br>
                         This might be due to:
                         <br>• Ad blocker or content security extensions

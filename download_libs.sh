@@ -23,7 +23,7 @@ else
 fi
 
 echo "Downloading OrbitControls..."
-if curl -fL -o lib/OrbitControls.js https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js; then
+if curl -fL -o lib/OrbitControls.js https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/controls/OrbitControls.js; then
     echo "✓ OrbitControls downloaded successfully"
 else
     echo "✗ Failed to download OrbitControls"

@@ -18,7 +18,7 @@ window.initTopographyViz = function() {
     const GLOBE_ROTATION_SPEED = 0.002;
     
     // Scene setup
-    let scene, camera, renderer, globe, controls;
+    let scene, camera, renderer, globe;
     let animationFrameId;
     let originalNodeData = [];
     let totalCount = 0;
@@ -50,15 +50,6 @@ window.initTopographyViz = function() {
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
-        
-        // Controls
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.enableZoom = true;
-        controls.enablePan = false;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5;
         
         // Add ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -249,7 +240,11 @@ window.initTopographyViz = function() {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         
-        controls.update();
+        // Auto-rotate globe
+        if (globe) {
+            globe.rotation.y += GLOBE_ROTATION_SPEED;
+        }
+        
         renderer.render(scene, camera);
     }
 
@@ -288,10 +283,6 @@ window.initTopographyViz = function() {
         
         if (globe) {
             scene.remove(globe);
-        }
-        
-        if (controls) {
-            controls.dispose();
         }
         
         // Clear stats

@@ -21,7 +21,7 @@ window.initSplitWorldViz = function() {
     const TOR_CLOUD_PULSE_AMPLITUDE = 0.05;
     
     // Scene setup
-    let scene, camera, renderer, globe, torCloud, controls;
+    let scene, camera, renderer, globe, torCloud;
     let animationFrameId;
     let originalClearnet = [];
     let originalTor = [];
@@ -54,15 +54,6 @@ window.initSplitWorldViz = function() {
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
-        
-        // Controls
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.enableZoom = true;
-        controls.enablePan = false;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5;
         
         // Add ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -342,6 +333,11 @@ window.initSplitWorldViz = function() {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         
+        // Auto-rotate globe
+        if (globe) {
+            globe.rotation.y += GLOBE_ROTATION_SPEED;
+        }
+        
         // Gentle rotation and pulsing of Tor cloud
         if (torCloud) {
             torCloud.rotation.y += TOR_CLOUD_ROTATION_SPEED_Y;
@@ -352,7 +348,6 @@ window.initSplitWorldViz = function() {
             torCloud.scale.set(scale, scale, scale);
         }
         
-        controls.update();
         renderer.render(scene, camera);
     }
 
@@ -397,10 +392,6 @@ window.initSplitWorldViz = function() {
             torCloud.geometry.dispose();
             torCloud.material.dispose();
             scene.remove(torCloud);
-        }
-        
-        if (controls) {
-            controls.dispose();
         }
         
         // Clear stats
