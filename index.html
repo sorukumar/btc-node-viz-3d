@@ -61,12 +61,22 @@
         }
     </script>
 
-    <!-- Import Three.js as ES module and three-globe as UMD -->
+    <!-- Import Three.js as ES module and load three-globe after -->
     <script type="module">
         import * as THREE from './lib/three.module.js';
         window.THREE = THREE;
+        
+        // Load three-globe after THREE is available
+        const script = document.createElement('script');
+        script.src = './lib/three-globe.min.js';
+        script.onload = () => {
+            console.log('three-globe loaded successfully');
+        };
+        script.onerror = () => {
+            console.error('Failed to load three-globe');
+        };
+        document.head.appendChild(script);
     </script>
-    <script src="lib/three-globe.min.js"></script>
 
     <!-- Main Application Scripts -->
     <script src="topography_viz.js"></script>
