@@ -207,30 +207,30 @@ window.initTopographyViz = function() {
      * Initialize the globe with hex-binned layer
      */
     function initGlobe(nodeData) {
-        globe = new ThreeGlobe()
-            .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg')
-            .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png')
-            .hexBinPointsData(nodeData)
-            .hexBinPointLat('lat')
-            .hexBinPointLng('lng')
-            .hexBinResolution(HEX_BIN_RESOLUTION)
-            .hexTopColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR))
-            .hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR))
-            .hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER)
-            .hexBinMerge(true)
-            .enablePointerInteraction(true)
-            .onHexClick(hexData => showHexDetails(hexData))
-            .onHexHover(hexData => {
-                const tooltip = document.getElementById('tooltip');
-                if (hexData) {
-                    tooltip.innerHTML = `Nodes: ${hexData.sumWeight}`;
-                    tooltip.style.left = mouseX + 10 + 'px';
-                    tooltip.style.top = mouseY + 10 + 'px';
-                    tooltip.classList.remove('hidden');
-                } else {
-                    tooltip.classList.add('hidden');
-                }
-            });
+        globe = new ThreeGlobe();
+        globe.globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg');
+        globe.bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png');
+        globe.hexBinPointsData(nodeData);
+        globe.hexBinPointLat('lat');
+        globe.hexBinPointLng('lng');
+        globe.hexBinResolution(HEX_BIN_RESOLUTION);
+        globe.hexTopColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR));
+        globe.hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR));
+        globe.hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER);
+        globe.hexBinMerge(true);
+        globe.enablePointerInteraction(true);
+        globe.onHexClick(hexData => showHexDetails(hexData));
+        globe.onHexHover(hexData => {
+            const tooltip = document.getElementById('tooltip');
+            if (hexData) {
+                tooltip.innerHTML = `Nodes: ${hexData.sumWeight}`;
+                tooltip.style.left = mouseX + 10 + 'px';
+                tooltip.style.top = mouseY + 10 + 'px';
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        });
         
         scene.add(globe);
         

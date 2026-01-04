@@ -225,40 +225,40 @@ window.initSplitWorldViz = function() {
      * Initialize the globe with clearnet nodes
      */
     function initGlobe(clearnetNodes) {
-        globe = new ThreeGlobe()
-            .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg')
-            .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png')
-            // Add clearnet nodes as glowing points
-            .pointsData(clearnetNodes)
-            .pointLat('lat')
-            .pointLng('lng')
-            .pointColor(() => '#ff6b00')
-            .pointAltitude(0.01)
-            .pointRadius(0.15)
-            // Add submarine cables as arcs
-            .arcsData(getSubmarineCables())
-            .arcStartLat('startLat')
-            .arcStartLng('startLng')
-            .arcEndLat('endLat')
-            .arcEndLng('endLng')
-            .arcColor(() => 'rgba(100, 200, 255, 0.3)')
-            .arcDashLength(0.4)
-            .arcDashGap(0.2)
-            .arcDashAnimateTime(3000)
-            .arcStroke(0.5)
-            .enablePointerInteraction(true)
-            .onPointClick(point => showPointDetails(point))
-            .onPointHover(point => {
-                const tooltip = document.getElementById('tooltip');
-                if (point) {
-                    tooltip.innerHTML = point.address;
-                    tooltip.style.left = mouseX + 10 + 'px';
-                    tooltip.style.top = mouseY + 10 + 'px';
-                    tooltip.classList.remove('hidden');
-                } else {
-                    tooltip.classList.add('hidden');
-                }
-            });
+        globe = new ThreeGlobe();
+        globe.globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-dark.jpg');
+        globe.bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-topology.png');
+        // Add clearnet nodes as glowing points
+        globe.pointsData(clearnetNodes);
+        globe.pointLat('lat');
+        globe.pointLng('lng');
+        globe.pointColor(() => '#ff6b00');
+        globe.pointAltitude(0.01);
+        globe.pointRadius(0.15);
+        // Add submarine cables as arcs
+        globe.arcsData(getSubmarineCables());
+        globe.arcStartLat('startLat');
+        globe.arcStartLng('startLng');
+        globe.arcEndLat('endLat');
+        globe.arcEndLng('endLng');
+        globe.arcColor(() => 'rgba(100, 200, 255, 0.3)');
+        globe.arcDashLength(0.4);
+        globe.arcDashGap(0.2);
+        globe.arcDashAnimateTime(3000);
+        globe.arcStroke(0.5);
+        globe.enablePointerInteraction(true);
+        globe.onPointClick(point => showPointDetails(point));
+        globe.onPointHover(point => {
+            const tooltip = document.getElementById('tooltip');
+            if (point) {
+                tooltip.innerHTML = point.address;
+                tooltip.style.left = mouseX + 10 + 'px';
+                tooltip.style.top = mouseY + 10 + 'px';
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        });
         
         scene.add(globe);
     }
