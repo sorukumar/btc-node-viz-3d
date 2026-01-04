@@ -103,11 +103,14 @@ window.initTopographyViz = function() {
                     const lng = nodeData[BITNODES_INDEX.LONGITUDE];
                     
                     if (lat !== null && lng !== null) {
-                        clearnetNodes.push({
+                        const node = {
                             lat: lat,
                             lng: lng,
-                            address: address
-                        });
+                            address: address,
+                            country: nodeData[4] || 'Unknown',
+                            version: nodeData[10] || 'Unknown'
+                        };
+                        clearnetNodes.push(node);
                     }
                 }
             });

@@ -93,7 +93,9 @@ window.initSplitWorldViz = function() {
                     const node = {
                         lat: lat,
                         lng: lng,
-                        address: address
+                        address: address,
+                        country: nodeData[4] || 'Unknown',
+                        version: nodeData[10] || 'Unknown'
                     };
                     
                     if (isTor) {
@@ -150,7 +152,9 @@ window.initSplitWorldViz = function() {
                 clearnetNodes.push({
                     lat: region.lat + (Math.random() - 0.5) * 10,
                     lng: region.lng + (Math.random() - 0.5) * 10,
-                    address: `clearnet-${i}`
+                    address: `clearnet-${i}`,
+                    country: 'Demo Country',
+                    version: '1.0.0'
                 });
             }
         });
@@ -160,7 +164,9 @@ window.initSplitWorldViz = function() {
             torNodes.push({
                 lat: (Math.random() - 0.5) * 180,
                 lng: (Math.random() - 0.5) * 360,
-                address: `tor-${i}`
+                address: `tor-${i}`,
+                country: 'Demo Country',
+                version: '1.0.0'
             });
         }
         
@@ -315,6 +321,14 @@ window.initSplitWorldViz = function() {
             <div class="details-item">
                 <span class="details-label">Node Address:</span>
                 <span class="details-value">${point.address}</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Country:</span>
+                <span class="details-value">${point.country}</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Version:</span>
+                <span class="details-value">${point.version}</span>
             </div>
             <div class="details-item">
                 <span class="details-label">Latitude:</span>
