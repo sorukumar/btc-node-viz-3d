@@ -21,8 +21,13 @@ window.initSplitWorldViz = function() {
     const TOR_CLOUD_PULSE_AMPLITUDE = 0.05;
     
     // Scene setup
-    let scene, camera, renderer, globe, torCloud;
+    let scene, camera, renderer, globe, torCloud, controls;
     let animationFrameId;
+    let originalClearnet = [];
+    let originalTor = [];
+    let totalCount = 0;
+    let mouseX, mouseY;
+    let mouseMoveListener;
     
     const container = document.getElementById('globeViz');
     const loadingDiv = document.getElementById('loading');
@@ -49,6 +54,15 @@ window.initSplitWorldViz = function() {
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
+        
+        // Controls
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
         
         // Add ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -101,8 +115,12 @@ window.initSplitWorldViz = function() {
             
             console.log(`Loaded ${clearnetNodes.length} clearnet nodes and ${torNodes.length} Tor nodes`);
             
+            originalClearnet = [...clearnetNodes];
+            originalTor = [...torNodes];
+            totalCount = Object.keys(nodes).length;
+            
             // Update stats
-            updateStats(clearnetNodes.length, torNodes.length, Object.keys(nodes).length);
+            updateStats(clearnetNodes.length, torNodes.length, totalCount);
             
             return { clearnetNodes, torNodes };
             
@@ -111,7 +129,12 @@ window.initSplitWorldViz = function() {
             loadingDiv.innerHTML = '<p style="color: #ff6b00;">Error loading data. Using demo mode.</p>';
             
             // Return demo data for testing
-            return generateDemoData();
+            const demo = generateDemoData();
+            originalClearnet = [...demo.clearnetNodes];
+            originalTor = [...demo.torNodes];
+            totalCount = originalClearnet.length + originalTor.length;
+            updateStats(originalClearnet.length, originalTor.length, totalCount);
+            return demo;
         }
     }
 
@@ -150,7 +173,6 @@ window.initSplitWorldViz = function() {
             });
         }
         
-        updateStats(clearnetNodes.length, torNodes.length, clearnetNodes.length + torNodes.length);
         return { clearnetNodes, torNodes };
     }
 
@@ -227,7 +249,19 @@ window.initSplitWorldViz = function() {
             .arcDashGap(0.2)
             .arcDashAnimateTime(3000)
             .arcStroke(0.5)
-            .enablePointerInteraction(true);
+            .enablePointerInteraction(true)
+            .onPointClick(point => showPointDetails(point))
+            .onPointHover(point => {
+                const tooltip = document.getElementById('tooltip');
+                if (point) {
+                    tooltip.innerHTML = point.address;
+                    tooltip.style.left = mouseX + 10 + 'px';
+                    tooltip.style.top = mouseY + 10 + 'px';
+                    tooltip.classList.remove('hidden');
+                } else {
+                    tooltip.classList.add('hidden');
+                }
+            });
         
         scene.add(globe);
     }
@@ -281,15 +315,32 @@ window.initSplitWorldViz = function() {
     }
 
     /**
+     * Show details for clicked point
+     */
+    function showPointDetails(point) {
+        const detailsDiv = document.getElementById('details');
+        detailsDiv.classList.remove('hidden');
+        detailsDiv.innerHTML = `
+            <div class="details-item">
+                <span class="details-label">Node Address:</span>
+                <span class="details-value">${point.address}</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Latitude:</span>
+                <span class="details-value">${point.lat.toFixed(2)}°</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Longitude:</span>
+                <span class="details-value">${point.lng.toFixed(2)}°</span>
+            </div>
+        `;
+    }
+
+    /**
      * Animation loop
      */
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
-        
-        // Auto-rotate globe
-        if (globe) {
-            globe.rotation.y += GLOBE_ROTATION_SPEED;
-        }
         
         // Gentle rotation and pulsing of Tor cloud
         if (torCloud) {
@@ -301,6 +352,7 @@ window.initSplitWorldViz = function() {
             torCloud.scale.set(scale, scale, scale);
         }
         
+        controls.update();
         renderer.render(scene, camera);
     }
 
@@ -325,6 +377,10 @@ window.initSplitWorldViz = function() {
         // Remove event listener
         window.removeEventListener('resize', onWindowResize);
         
+        if (mouseMoveListener) {
+            container.removeEventListener('mousemove', mouseMoveListener);
+        }
+        
         // Dispose of Three.js objects
         if (renderer) {
             renderer.dispose();
@@ -343,8 +399,25 @@ window.initSplitWorldViz = function() {
             scene.remove(torCloud);
         }
         
+        if (controls) {
+            controls.dispose();
+        }
+        
         // Clear stats
         statsDiv.innerHTML = '';
+        
+        // Clear details
+        const detailsDiv = document.getElementById('details');
+        if (detailsDiv) {
+            detailsDiv.classList.add('hidden');
+            detailsDiv.innerHTML = '';
+        }
+        
+        // Hide tooltip
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) {
+            tooltip.classList.add('hidden');
+        }
     }
 
     /**
@@ -359,6 +432,12 @@ window.initSplitWorldViz = function() {
         
         loadingDiv.classList.add('hidden');
         
+        mouseMoveListener = (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        };
+        container.addEventListener('mousemove', mouseMoveListener);
+        
         window.addEventListener('resize', onWindowResize);
     }
 
@@ -366,5 +445,12 @@ window.initSplitWorldViz = function() {
     init();
 
     // Return cleanup function
-    return { cleanup };
+    return { 
+        cleanup,
+        filterNodes: (query) => {
+            const filteredClearnet = originalClearnet.filter(node => node.address.toLowerCase().includes(query));
+            globe.pointsData(filteredClearnet);
+            updateStats(filteredClearnet.length, originalTor.length, totalCount);
+        }
+    };
 };

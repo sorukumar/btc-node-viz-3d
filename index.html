@@ -15,6 +15,7 @@
                 <button id="topographyBtn" class="nav-btn active">Bitcoin Topography</button>
                 <button id="splitWorldBtn" class="nav-btn">Split World</button>
             </nav>
+            <input type="text" id="searchInput" placeholder="Search nodes by address..." class="search-input">
         </div>
     </header>
 
@@ -32,7 +33,11 @@
         <h3 id="vizTitle">Bitcoin Topography</h3>
         <p id="vizDescription">3D hex-binned visualization of clearnet Bitcoin nodes</p>
         <div id="stats" class="stats"></div>
+        <div id="details" class="details hidden"></div>
     </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip hidden"></div>
 
     <!-- Library Error Handler - Must be defined before loading CDN scripts -->
     <script>
@@ -56,9 +61,10 @@
         }
     </script>
 
-    <!-- Import Three.js and three-globe from CDN -->
+    <!-- Import Three.js, OrbitControls, and three-globe from CDN -->
     <!-- Using jsdelivr.net for better reliability and compatibility with GitHub Pages -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" onerror="handleLibraryError('Three.js')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js" onerror="handleLibraryError('OrbitControls')"></script>
     <script src="https://cdn.jsdelivr.net/npm/three-globe@2.31.0/dist/three-globe.min.js" onerror="handleLibraryError('three-globe')"></script>
 
     <!-- Main Application Scripts -->
@@ -89,6 +95,17 @@
             }
         });
 
+        // Search input handler
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (currentViz === 'topography' && topographyInstance && topographyInstance.filterNodes) {
+                topographyInstance.filterNodes(query);
+            } else if (currentViz === 'splitWorld' && splitWorldInstance && splitWorldInstance.filterNodes) {
+                splitWorldInstance.filterNodes(query);
+            }
+        });
+
         function updateActiveButton() {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             if (currentViz === 'topography') {
@@ -104,6 +121,17 @@
 
         function switchVisualization() {
             const container = document.getElementById('globeViz');
+            
+            // Clear search
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            
+            // Clear details
+            const detailsDiv = document.getElementById('details');
+            if (detailsDiv) {
+                detailsDiv.classList.add('hidden');
+                detailsDiv.innerHTML = '';
+            }
             
             // Clean up previous visualization
             if (topographyInstance && topographyInstance.cleanup) {
@@ -131,13 +159,13 @@
         // Initialize first visualization on load
         window.addEventListener('load', () => {
             // Check if required libraries are loaded
-            if (typeof THREE === 'undefined' || typeof ThreeGlobe === 'undefined') {
-                console.error('Required libraries not loaded. THREE:', typeof THREE, 'ThreeGlobe:', typeof ThreeGlobe);
+            if (typeof THREE === 'undefined' || typeof ThreeGlobe === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+                console.error('Required libraries not loaded. THREE:', typeof THREE, 'ThreeGlobe:', typeof ThreeGlobe, 'OrbitControls:', typeof THREE.OrbitControls);
                 const loadingDiv = document.getElementById('loading');
                 loadingDiv.innerHTML = `
                     <p style="color: #ff6b00; font-size: 18px; margin-bottom: 15px;">Error: Visualization Libraries Not Loaded</p>
                     <p style="color: #e0e0e0; font-size: 14px; max-width: 400px;">
-                        The required 3D graphics libraries (Three.js and three-globe) failed to load.
+                        The required 3D graphics libraries (Three.js, three-globe, and OrbitControls) failed to load.
                         <br><br>
                         This might be due to:
                         <br>• Ad blocker or content security extensions

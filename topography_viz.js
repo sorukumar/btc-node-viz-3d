@@ -18,8 +18,12 @@ window.initTopographyViz = function() {
     const GLOBE_ROTATION_SPEED = 0.002;
     
     // Scene setup
-    let scene, camera, renderer, globe;
+    let scene, camera, renderer, globe, controls;
     let animationFrameId;
+    let originalNodeData = [];
+    let totalCount = 0;
+    let mouseX, mouseY;
+    let mouseMoveListener;
     
     const container = document.getElementById('globeViz');
     const loadingDiv = document.getElementById('loading');
@@ -46,6 +50,15 @@ window.initTopographyViz = function() {
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
+        
+        // Controls
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
         
         // Add ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -110,8 +123,11 @@ window.initTopographyViz = function() {
             
             console.log(`Loaded ${clearnetNodes.length} clearnet nodes`);
             
+            originalNodeData = [...clearnetNodes];
+            totalCount = Object.keys(nodes).length;
+            
             // Update stats
-            updateStats(clearnetNodes.length, Object.keys(nodes).length);
+            updateStats(clearnetNodes.length, totalCount);
             
             return clearnetNodes;
             
@@ -120,7 +136,10 @@ window.initTopographyViz = function() {
             loadingDiv.innerHTML = '<p style="color: #ff6b00;">Error loading data. Using demo mode.</p>';
             
             // Return demo data for testing
-            return generateDemoData();
+            const demoData = generateDemoData();
+            originalNodeData = [...demoData];
+            totalCount = demoData.length;
+            return demoData;
         }
     }
 
@@ -169,6 +188,28 @@ window.initTopographyViz = function() {
     }
 
     /**
+     * Show details for clicked hex bin
+     */
+    function showHexDetails(hexData) {
+        const detailsDiv = document.getElementById('details');
+        detailsDiv.classList.remove('hidden');
+        detailsDiv.innerHTML = `
+            <div class="details-item">
+                <span class="details-label">Nodes in Region:</span>
+                <span class="details-value">${hexData.sumWeight}</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Latitude:</span>
+                <span class="details-value">${hexData.lat.toFixed(2)}°</span>
+            </div>
+            <div class="details-item">
+                <span class="details-label">Longitude:</span>
+                <span class="details-value">${hexData.lng.toFixed(2)}°</span>
+            </div>
+        `;
+    }
+
+    /**
      * Initialize the globe with hex-binned layer
      */
     function initGlobe(nodeData) {
@@ -183,7 +224,19 @@ window.initTopographyViz = function() {
             .hexSideColor(d => getColorForValue(d.sumWeight, nodeData.length / MAX_VALUE_DIVISOR))
             .hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER)
             .hexBinMerge(true)
-            .enablePointerInteraction(true);
+            .enablePointerInteraction(true)
+            .onHexClick(hexData => showHexDetails(hexData))
+            .onHexHover(hexData => {
+                const tooltip = document.getElementById('tooltip');
+                if (hexData) {
+                    tooltip.innerHTML = `Nodes: ${hexData.sumWeight}`;
+                    tooltip.style.left = mouseX + 10 + 'px';
+                    tooltip.style.top = mouseY + 10 + 'px';
+                    tooltip.classList.remove('hidden');
+                } else {
+                    tooltip.classList.add('hidden');
+                }
+            });
         
         scene.add(globe);
         
@@ -196,11 +249,7 @@ window.initTopographyViz = function() {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         
-        // Auto-rotate globe
-        if (globe) {
-            globe.rotation.y += GLOBE_ROTATION_SPEED;
-        }
-        
+        controls.update();
         renderer.render(scene, camera);
     }
 
@@ -225,6 +274,10 @@ window.initTopographyViz = function() {
         // Remove event listener
         window.removeEventListener('resize', onWindowResize);
         
+        if (mouseMoveListener) {
+            container.removeEventListener('mousemove', mouseMoveListener);
+        }
+        
         // Dispose of Three.js objects
         if (renderer) {
             renderer.dispose();
@@ -237,8 +290,25 @@ window.initTopographyViz = function() {
             scene.remove(globe);
         }
         
+        if (controls) {
+            controls.dispose();
+        }
+        
         // Clear stats
         statsDiv.innerHTML = '';
+        
+        // Clear details
+        const detailsDiv = document.getElementById('details');
+        if (detailsDiv) {
+            detailsDiv.classList.add('hidden');
+            detailsDiv.innerHTML = '';
+        }
+        
+        // Hide tooltip
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) {
+            tooltip.classList.add('hidden');
+        }
     }
 
     /**
@@ -250,6 +320,12 @@ window.initTopographyViz = function() {
         initGlobe(nodeData);
         animate();
         
+        mouseMoveListener = (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        };
+        container.addEventListener('mousemove', mouseMoveListener);
+        
         window.addEventListener('resize', onWindowResize);
     }
 
@@ -257,5 +333,15 @@ window.initTopographyViz = function() {
     init();
 
     // Return cleanup function
-    return { cleanup };
+    return { 
+        cleanup,
+        filterNodes: (query) => {
+            const filtered = originalNodeData.filter(node => node.address.toLowerCase().includes(query));
+            globe.hexBinPointsData(filtered);
+            globe.hexTopColor(d => getColorForValue(d.sumWeight, filtered.length / MAX_VALUE_DIVISOR));
+            globe.hexSideColor(d => getColorForValue(d.sumWeight, filtered.length / MAX_VALUE_DIVISOR));
+            globe.hexAltitude(d => d.sumWeight * ALTITUDE_MULTIPLIER);
+            updateStats(filtered.length, totalCount);
+        }
+    };
 };
