@@ -7,18 +7,18 @@ set -e  # Exit on any error
 mkdir -p lib
 
 echo "Downloading Three.js..."
-if curl -fL -o lib/three.min.js https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js; then
-    echo "✓ Three.js downloaded successfully"
+if curl -fL -o lib/three.module.js https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js; then
+    echo "✓ Three.js module downloaded successfully"
 else
-    echo "✗ Failed to download Three.js"
+    echo "✗ Failed to download Three.js module"
     exit 1
 fi
 
 echo "Downloading three-globe..."
-if curl -fL -o lib/three-globe.min.js https://cdn.jsdelivr.net/npm/three-globe@2.31.0/dist/three-globe.min.js; then
-    echo "✓ three-globe downloaded successfully"
+if curl -fL -o lib/three-globe.module.js https://cdn.jsdelivr.net/npm/three-globe@2.31.0/dist/three-globe.module.js; then
+    echo "✓ three-globe module downloaded successfully"
 else
-    echo "✗ Failed to download three-globe"
+    echo "✗ Failed to download three-globe module"
     exit 1
 fi
 
@@ -33,6 +33,6 @@ fi
 echo ""
 echo "Done! Libraries downloaded to lib/ directory"
 echo "To use local libraries, update the script tags in index.html to:"
-echo '  <script src="lib/three.min.js"></script>'
+echo '  <script src="lib/three.module.js"></script>'
 echo '  <script src="lib/OrbitControls.js"></script>'
-echo '  <script src="lib/three-globe.min.js"></script>'
+echo '  <script src="lib/three-globe.module.js"></script>'

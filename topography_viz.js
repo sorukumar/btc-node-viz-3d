@@ -102,7 +102,7 @@ window.initTopographyViz = function() {
                     const lat = nodeData[BITNODES_INDEX.LATITUDE];
                     const lng = nodeData[BITNODES_INDEX.LONGITUDE];
                     
-                    if (lat !== null && lng !== null) {
+                    if (lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                         const node = {
                             lat: lat,
                             lng: lng,

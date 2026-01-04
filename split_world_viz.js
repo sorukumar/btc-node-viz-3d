@@ -89,7 +89,7 @@ window.initSplitWorldViz = function() {
                 const lng = nodeData[BITNODES_INDEX.LONGITUDE];
                 const isTor = nodeData[BITNODES_INDEX.TOR];
                 
-                if (lat !== null && lng !== null) {
+                if (lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                     const node = {
                         lat: lat,
                         lng: lng,

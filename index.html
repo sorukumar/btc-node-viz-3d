@@ -61,9 +61,11 @@
         }
     </script>
 
-    <!-- Import Three.js, OrbitControls, and three-globe from local lib directory -->
-    <!-- Libraries are downloaded locally to ensure compatibility with GitHub Pages -->
-    <script src="lib/three.min.js"></script>
+    <!-- Import Three.js as ES module and three-globe as UMD -->
+    <script type="module">
+        import * as THREE from './lib/three.module.js';
+        window.THREE = THREE;
+    </script>
     <script src="lib/three-globe.min.js"></script>
 
     <!-- Main Application Scripts -->
